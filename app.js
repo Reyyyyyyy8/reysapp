@@ -34,6 +34,21 @@ function getApi(){return localStorage.getItem(API_KEY)||'';}
 function ymOf(s){return (s||'').slice(0,7);}
 function curYM(){return cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0');}
 function monthData(){const ym=curYM();return data.filter(d=>ymOf(d.tanggal)===ym);}
+function prevYM(){const d=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function monthDataYM(ym){return data.filter(d=>ymOf(d.tanggal)===ym);}
+const RUTIN_KEY='reysapp_rutin';
+const GOAL_KEY='reysapp_goal';
+function getRutin(){try{return JSON.parse(localStorage.getItem(RUTIN_KEY))||[];}catch(e){return [];}}
+function setRutinArr(arr){localStorage.setItem(RUTIN_KEY,JSON.stringify(arr));}
+function getGoal(){try{return JSON.parse(localStorage.getItem(GOAL_KEY))||null;}catch(e){return null;}}
+function setGoalData(g){localStorage.setItem(GOAL_KEY,JSON.stringify(g));}
+function avgSurplus(){
+  const byM={};
+  data.forEach(d=>{const m=ymOf(d.tanggal);if(!byM[m])byM[m]=0;byM[m]+=d.tipe==='pemasukan'?d.nominal:-d.nominal;});
+  const vals=Object.values(byM);
+  if(!vals.length)return 0;
+  return vals.reduce((s,v)=>s+v,0)/vals.length;
+}
 
 function setTab(t){
   curTab=t;
@@ -99,7 +114,8 @@ function render(){
     });
   }
   if(curTab==='dash')renderDash(md,tin,tout);
-  if(curTab==='budget')renderBudget(md);
+  if(curTab==='budget'){renderBudget(md);renderGoal();}
+  renderRutin();
 }
 
 function renderDash(md,tin,tout){
@@ -107,6 +123,10 @@ function renderDash(md,tin,tout){
   document.getElementById('dOut').textContent=rp(tout);
   const net=document.getElementById('dNet');net.textContent=rp(tin-tout);
   net.className='v '+((tin-tout)>=0?'in':'out');
+  const pm=monthDataYM(prevYM());
+  let pin=0,pout=0;pm.forEach(d=>{d.tipe==='pemasukan'?pin+=d.nominal:pout+=d.nominal;});
+  renderCompare(tin,tout,pin,pout);
+  renderSavings(tin,tout);
   const map={};
   md.filter(d=>d.tipe==='pengeluaran').forEach(d=>{map[d.kategori]=(map[d.kategori]||0)+d.nominal;});
   const arr=Object.keys(map).map(k=>({nama:k,val:map[k]})).sort((a,b)=>b.val-a.val);
@@ -286,6 +306,111 @@ async function analisaAI(){
   }
   btn.disabled=false;btn.textContent='\u2728 Analisa Ulang';
 }
+
+function deltaBadge(now,prev,goodWhenUp){
+  if(prev<=0)return '<span class="dlt">data baru</span>';
+  const p=(now-prev)/prev*100;
+  const sign=p>0?'+':'';
+  const good=goodWhenUp?p>0:p<0;
+  const cls=p===0?'':(good?'gd':'bd');
+  const arrow=p>0?'\u25b2':(p<0?'\u25bc':'\u2022');
+  return '<span class="dlt '+cls+'">'+arrow+' '+sign+p.toFixed(0)+'%</span>';
+}
+function renderCompare(tin,tout,pin,pout){
+  const box=document.getElementById('compareBox');if(!box)return;
+  box.innerHTML=
+    '<div class="cmp"><span class="cl">Pengeluaran</span><span class="cv">'+rp(tout)+'</span>'+deltaBadge(tout,pout,false)+'</div>'+
+    '<div class="cmp"><span class="cl">Pemasukan</span><span class="cv">'+rp(tin)+'</span>'+deltaBadge(tin,pin,true)+'</div>'+
+    '<div class="cmphint">Bulan lalu: '+rp(pout)+' keluar \u00b7 '+rp(pin)+' masuk</div>';
+}
+function renderSavings(tin,tout){
+  const box=document.getElementById('savingsBox');if(!box)return;
+  const net=tin-tout;
+  const rate=tin>0?net/tin*100:0;
+  let verdict;
+  if(tin<=0)verdict='Belum ada pemasukan bulan ini.';
+  else if(rate>=20)verdict='Mantap! Nabung lo sehat \ud83d\udcaa';
+  else if(rate>=0)verdict='Lumayan, tapi masih bisa ditingkatin.';
+  else verdict='Waduh, pengeluaran > pemasukan \u26a0\ufe0f';
+  box.innerHTML=
+    '<div class="srate"><div class="sr-num">'+rate.toFixed(0)+'%</div><div class="sr-lbl">Savings Rate bulan ini</div></div>'+
+    '<div class="sr-verdict">'+verdict+'</div>'+
+    '<div class="sr-rule"><b>Patokan 50/30/20</b> dari pemasukan '+rpShort(tin)+':</div>'+
+    '<div class="sr-row"><span>\ud83c\udfe0 Kebutuhan (50%)</span><span>'+rp(tin*0.5)+'</span></div>'+
+    '<div class="sr-row"><span>\ud83d\uded2 Keinginan (30%)</span><span>'+rp(tin*0.3)+'</span></div>'+
+    '<div class="sr-row"><span>\ud83d\udcb0 Nabung (20%)</span><span>'+rp(tin*0.2)+'</span></div>';
+}
+function renderRutin(){
+  const box=document.getElementById('rutinList');if(!box)return;
+  const arr=getRutin();
+  if(!arr.length){box.innerHTML='<div class="empty">Belum ada transaksi rutin. Isi form di atas, terus tap "Jadikan Rutin".</div>';return;}
+  box.innerHTML='';
+  arr.forEach((r,i)=>{
+    const inc=r.tipe==='pemasukan';
+    const row=document.createElement('div');row.className='rutin';
+    row.innerHTML='<div class="info"><div class="k"></div><div class="m"></div></div>'+
+      '<button class="mini add">+ Catat</button><button class="mini del">\u2715</button>';
+    row.querySelector('.k').textContent=(inc?'\u2191 ':'\u2193 ')+r.kategori+' \u00b7 '+rp(r.nominal);
+    row.querySelector('.m').textContent=r.catatan||'';
+    row.querySelector('.add').onclick=()=>catatRutin(i);
+    row.querySelector('.del').onclick=()=>hapusRutin(i);
+    box.appendChild(row);
+  });
+}
+function addRutinFromForm(){
+  const nominal=nominalVal();
+  if(!nominal){toast('Isi form transaksi di atas dulu');return;}
+  const arr=getRutin();
+  arr.push({tipe,kategori,nominal,catatan:document.getElementById('catatan').value.trim()});
+  setRutinArr(arr);renderRutin();toast('Disimpan jadi transaksi rutin \ud83d\udd01');
+}
+function hapusRutin(i){const arr=getRutin();arr.splice(i,1);setRutinArr(arr);renderRutin();toast('Rutin dihapus');}
+async function catatRutin(i){
+  const r=getRutin()[i];if(!r)return;
+  if(!getApi()){toast('Sambungin ke Sheet dulu di \u2699\ufe0f');openSettings();return;}
+  const d=new Date();
+  const today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  try{
+    const saved=await api('POST',{action:'add',tipe:r.tipe,kategori:r.kategori,nominal:r.nominal,tanggal:today,catatan:r.catatan});
+    data.unshift(saved);cursor=new Date(saved.tanggal+'T00:00:00');render();
+    toast('Dicatat: '+r.kategori+' '+rp(r.nominal));
+    if(saved.tipe==='pengeluaran')setTimeout(()=>checkBudgetAlert(saved.kategori),350);
+  }catch(e){toast('Gagal: '+e.message);}
+}
+function renderGoal(){
+  const box=document.getElementById('goalBox');if(!box)return;
+  const g=getGoal();
+  if(!g){
+    box.innerHTML='<div class="empty">Belum ada target. Set di bawah \ud83d\udc47</div>';
+    document.getElementById('goalDelBtn').classList.add('hidden');
+    return;
+  }
+  document.getElementById('goalName').value=g.nama;
+  document.getElementById('goalTarget').value=g.target.toLocaleString('id-ID');
+  document.getElementById('goalDelBtn').classList.remove('hidden');
+  let allIn=0,allOut=0;data.forEach(d=>{d.tipe==='pemasukan'?allIn+=d.nominal:allOut+=d.nominal;});
+  const saldo=allIn-allOut;
+  const pct=g.target>0?Math.min(saldo/g.target*100,100):0;
+  const sisa=Math.max(g.target-saldo,0);
+  const avg=avgSurplus();
+  let eta;
+  if(sisa<=0)eta='\ud83c\udf89 Target tercapai!';
+  else if(avg>0)eta='Kira-kira '+Math.ceil(sisa/avg)+' bulan lagi (rata-rata nabung '+rpShort(avg)+'/bln)';
+  else eta='Belum bisa ngira-ngira, rata-rata nabung lo masih minus';
+  box.innerHTML='<div class="goaltop"><span class="gn"></span><span class="gp">'+pct.toFixed(0)+'%</span></div>'+
+    '<div class="track"><div class="fill" style="width:'+pct+'%;background:var(--orange)"></div></div>'+
+    '<div class="ginfo">'+rp(saldo)+' / '+rp(g.target)+' \u00b7 sisa '+rp(sisa)+'</div>'+
+    '<div class="geta">'+eta+'</div>';
+  box.querySelector('.gn').textContent=g.nama;
+}
+function saveGoal(){
+  const nama=document.getElementById('goalName').value.trim();
+  const target=Number(document.getElementById('goalTarget').value.replace(/[^0-9]/g,''))||0;
+  if(!target){toast('Isi target nominalnya dulu');return;}
+  setGoalData({nama:nama||'Target Nabung',target});
+  renderGoal();toast('Target disimpan \ud83c\udfaf');
+}
+function hapusGoal(){setGoalData(null);document.getElementById('goalName').value='';document.getElementById('goalTarget').value='';renderGoal();toast('Target dihapus');}
 
 async function api(method,body){
   const url=getApi();

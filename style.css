@@ -125,3 +125,46 @@ input:focus,select:focus{border-color:var(--orange);}
 .airesult{margin-top:18px;font-size:14px;line-height:1.7;color:var(--text);}
 .airesult:empty{display:none;}
 .airesult b{color:var(--orange2);}
+
+/* generic progress track */
+.track{height:9px;background:var(--bg2);border-radius:6px;overflow:hidden;}
+.track .fill{height:100%;border-radius:6px;transition:width .3s;}
+
+/* ghost button */
+.btn.ghost{background:var(--bg2);border:1px solid var(--line);color:var(--text);}
+
+/* transaksi rutin */
+.rutin{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+.rutin:last-child{border-bottom:none;}
+.rutin .info{flex:1;min-width:0;}
+.rutin .info .k{font-weight:700;font-size:14px;}
+.rutin .info .m{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mini{border:none;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;}
+.mini.add{background:var(--green);color:#06210f;}
+.mini.del{background:var(--bg2);color:var(--muted);margin-left:6px;}
+
+/* perbandingan bulan */
+.cmp{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);}
+.cmp:last-of-type{border-bottom:none;}
+.cmp .cl{flex:1;font-size:14px;}
+.cmp .cv{font-weight:700;font-size:14px;}
+.dlt{font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--bg2);color:var(--muted);white-space:nowrap;}
+.dlt.gd{background:rgba(46,212,122,.15);color:var(--green);}
+.dlt.bd{background:rgba(255,93,108,.15);color:var(--red);}
+.cmphint{font-size:12px;color:var(--muted);margin-top:10px;}
+
+/* savings rate */
+.srate{text-align:center;margin-bottom:8px;}
+.sr-num{font-size:34px;font-weight:800;color:var(--orange);}
+.sr-lbl{font-size:12px;color:var(--muted);}
+.sr-verdict{text-align:center;font-size:13px;margin-bottom:14px;}
+.sr-rule{font-size:13px;margin-bottom:6px;}
+.sr-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.sr-row:last-child{border-bottom:none;}
+
+/* target nabung */
+.goaltop{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.goaltop .gn{font-weight:700;font-size:15px;}
+.goaltop .gp{font-weight:800;color:var(--orange);}
+.ginfo{font-size:13px;color:var(--muted);margin-top:8px;}
+.geta{font-size:13px;color:var(--text);margin-top:6px;}

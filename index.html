@@ -63,6 +63,13 @@
     </div>
 
     <div class="card">
+      <h3>🔁 Transaksi Rutin</h3>
+      <p class="hint">Transaksi yang berulang tiap bulan (kos, langganan, gaji). Isi form di atas, tap "Jadikan Rutin", nanti tinggal "+ Catat".</p>
+      <button class="btn ghost" onclick="addRutinFromForm()">➕ Jadikan Rutin (dari form di atas)</button>
+      <div id="rutinList" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card">
       <h3>Transaksi Bulan Ini</h3>
       <div id="list"><div class="empty">Belum ada transaksi.</div></div>
     </div>
@@ -76,6 +83,16 @@
     </div>
     <div class="stat" style="margin-top:10px;">
       <div class="s">Selisih (Saldo Bulan Ini)</div><div class="v" id="dNet">Rp 0</div>
+    </div>
+
+    <div class="card">
+      <h3>📊 Dibanding Bulan Lalu</h3>
+      <div id="compareBox"></div>
+    </div>
+
+    <div class="card">
+      <h3>💹 Savings Rate & 50/30/20</h3>
+      <div id="savingsBox"></div>
     </div>
 
     <div class="card">
@@ -98,6 +115,17 @@
       <h3>Budget Bulanan per Kategori</h3>
       <p class="hint">Set limit pengeluaran tiap kategori. ReysApp bakal ngingetin kalo udah mau over (80%) atau kelewat.</p>
       <div id="budgetList"></div>
+    </div>
+
+    <div class="card">
+      <h3>🎯 Target Nabung</h3>
+      <div id="goalBox"></div>
+      <label>Nama target</label>
+      <input id="goalName" type="text" placeholder="contoh: Beli iPhone" />
+      <label>Target nominal (Rp)</label>
+      <input id="goalTarget" type="tel" inputmode="numeric" placeholder="0" oninput="formatNominal(this)" />
+      <button class="btn" onclick="saveGoal()">Simpan Target</button>
+      <button class="btn ghost hidden" id="goalDelBtn" onclick="hapusGoal()">Hapus Target</button>
     </div>
   </div>
 
