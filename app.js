@@ -11,13 +11,16 @@ let data=[];
 let curTab='catat';
 let cursor=new Date();
 const API_KEY='reysapp_api_url';
-const DEFAULT_API='https://script.google.com/macros/s/AKfycbxXhptJeFPphxRWApoDlloPQDPIvBamPhbx6PvadFjGTzuw_I28ko1WiduA3Jp3G9AL/exec'; // <- URL lo
+const BUDGET_KEY='reysapp_budget';
+function getBudgets(){try{return JSON.parse(localStorage.getItem(BUDGET_KEY))||{};}catch(e){return {};}}
+function setBudget(kat,val){const b=getBudgets();if(val>0)b[kat]=val;else delete b[kat];localStorage.setItem(BUDGET_KEY,JSON.stringify(b));render();}
+function spentByCat(md){const m={};md.filter(d=>d.tipe==='pengeluaran').forEach(d=>{m[d.kategori]=(m[d.kategori]||0)+d.nominal;});return m;}
 
 function rp(n){return 'Rp '+(Number(n)||0).toLocaleString('id-ID');}
 function rpShort(n){n=Number(n)||0;if(n>=1e9)return 'Rp '+(n/1e9).toFixed(1)+'M';if(n>=1e6)return 'Rp '+(n/1e6).toFixed(1)+'jt';if(n>=1e3)return 'Rp '+(n/1e3).toFixed(0)+'rb';return 'Rp '+n;}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
-function getApi(){return localStorage.getItem(API_KEY)||DEFAULT_API;}
+function getApi(){return localStorage.getItem(API_KEY)||'';}
 function ymOf(s){return (s||'').slice(0,7);}
 function curYM(){return cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0');}
 function monthData(){const ym=curYM();return data.filter(d=>ymOf(d.tanggal)===ym);}
@@ -26,8 +29,10 @@ function setTab(t){
   curTab=t;
   document.getElementById('tabCatat').classList.toggle('active',t==='catat');
   document.getElementById('tabDash').classList.toggle('active',t==='dash');
+  document.getElementById('tabBudget').classList.toggle('active',t==='budget');
   document.getElementById('viewCatat').classList.toggle('hidden',t!=='catat');
   document.getElementById('viewDash').classList.toggle('hidden',t!=='dash');
+  document.getElementById('viewBudget').classList.toggle('hidden',t!=='budget');
   render();
 }
 function shiftMonth(d){cursor.setMonth(cursor.getMonth()+d);render();}
@@ -56,9 +61,12 @@ function render(){
   const md=monthData();
   let tin=0,tout=0;
   md.forEach(d=>{d.tipe==='pemasukan'?tin+=d.nominal:tout+=d.nominal;});
+  let allIn=0,allOut=0;
+  data.forEach(d=>{d.tipe==='pemasukan'?allIn+=d.nominal:allOut+=d.nominal;});
+  document.getElementById('saldo').textContent=rp(allIn-allOut);
   document.getElementById('totalIn').textContent=rp(tin);
   document.getElementById('totalOut').textContent=rp(tout);
-  document.getElementById('saldo').textContent=rp(tin-tout);
+  const fl=document.getElementById('flowLabel');if(fl)fl.textContent='Arus '+BULAN[cursor.getMonth()]+' '+cursor.getFullYear();
   const list=document.getElementById('list');
   if(!md.length){list.innerHTML='<div class="empty">Belum ada transaksi bulan ini.</div>';}
   else{
@@ -77,6 +85,7 @@ function render(){
     });
   }
   if(curTab==='dash')renderDash(md,tin,tout);
+  if(curTab==='budget')renderBudget(md);
 }
 
 function renderDash(md,tin,tout){
@@ -137,6 +146,46 @@ function drawDonut(arr,total){
   svg.innerHTML=html;
 }
 
+function renderBudget(md){
+  const spent=spentByCat(md);
+  const budgets=getBudgets();
+  const box=document.getElementById('budgetList');
+  box.innerHTML='';
+  KATEGORI.pengeluaran.forEach(kat=>{
+    const limit=budgets[kat]||0;
+    const used=spent[kat]||0;
+    const pct=limit?Math.min(used/limit*100,100):0;
+    let color='var(--green)';
+    if(limit&&used/limit>=1)color='var(--red)';
+    else if(limit&&used/limit>=0.8)color='var(--orange)';
+    const row=document.createElement('div');row.className='bgt';
+    row.innerHTML='<div class="bgt-top"><span class="nm"></span>'+
+      '<span class="lim">Rp <input type="tel" inputmode="numeric" class="bgt-in" placeholder="0"></span></div>'+
+      '<div class="track"><div class="fill"></div></div>'+
+      '<div class="bgt-info"></div>';
+    row.querySelector('.nm').textContent=kat;
+    const inp=row.querySelector('.bgt-in');
+    inp.value=limit?limit.toLocaleString('id-ID'):'';
+    inp.oninput=()=>{formatNominal(inp);};
+    inp.onchange=()=>{setBudget(kat,Number(inp.value.replace(/[^0-9]/g,''))||0);};
+    const fill=row.querySelector('.fill');
+    fill.style.width=pct+'%';fill.style.background=color;
+    const info=row.querySelector('.bgt-info');
+    if(!limit){info.innerHTML='Belum diset \u00b7 kepake '+rp(used);}
+    else if(used>limit){info.innerHTML='<span class="bad">\u26a0\ufe0f Over '+rp(used-limit)+'</span> \u00b7 '+rp(used)+' / '+rp(limit);}
+    else{info.innerHTML=rp(used)+' / '+rp(limit)+' \u00b7 sisa '+rp(limit-used);}
+    box.appendChild(row);
+  });
+}
+
+function checkBudgetAlert(kat){
+  const b=getBudgets();const limit=b[kat];if(!limit)return;
+  const used=spentByCat(monthData())[kat]||0;
+  const r=used/limit;
+  if(r>=1)toast('\u26a0\ufe0f Budget '+kat+' udah OVER! ('+rp(used)+' / '+rp(limit)+')');
+  else if(r>=0.8)toast('\u26a0\ufe0f Budget '+kat+' udah '+Math.round(r*100)+'% kepake');
+}
+
 async function api(method,body){
   const url=getApi();
   if(!url)throw new Error('URL belum diatur');
@@ -177,6 +226,7 @@ async function simpan(){
     document.getElementById('nominal').value='';
     document.getElementById('catatan').value='';
     toast('Tersimpan ✅');
+    if(saved.tipe==='pengeluaran')setTimeout(()=>checkBudgetAlert(saved.kategori),350);
   }catch(e){toast('Gagal simpan: '+e.message);}
   btn.disabled=false;btn.textContent='Simpan Transaksi';
 }

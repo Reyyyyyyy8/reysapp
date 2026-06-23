@@ -37,7 +37,8 @@ header .gear{margin-left:auto;background:var(--card);border:1px solid var(--line
   background:radial-gradient(circle,var(--orange) 0%,transparent 70%);opacity:.35;}
 .balance .lbl{color:var(--muted);font-size:13px;}
 .balance .amt{font-size:32px;font-weight:800;margin-top:4px;}
-.balance .row{display:flex;gap:10px;margin-top:16px;}
+.balance .row{display:flex;gap:10px;margin-top:8px;}
+.balance .mlabel{color:var(--muted);font-size:12px;margin-top:14px;}
 .balance .row .b{flex:1;background:rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;}
 .balance .row .b .s{font-size:12px;color:var(--muted);}
 .balance .row .b .v{font-size:15px;font-weight:700;margin-top:2px;}
@@ -107,3 +108,14 @@ input:focus,select:focus{border-color:var(--orange);}
 .status{font-size:11px;color:var(--muted);text-align:center;margin-top:14px;}
 .status b{color:var(--orange);}
 .hidden{display:none;}
+
+/* budget */
+.hint{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.5;}
+.bgt{margin:16px 0;}
+.bgt-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:7px;}
+.bgt-top .nm{font-weight:700;}
+.bgt-top .lim{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:5px;}
+.bgt-in{width:120px;background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:9px;font-size:14px;text-align:right;outline:none;}
+.bgt-in:focus{border-color:var(--orange);}
+.bgt-info{font-size:12px;color:var(--muted);margin-top:7px;}
+.bgt-info .bad{color:var(--red);font-weight:700;}
