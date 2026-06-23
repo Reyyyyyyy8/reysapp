@@ -72,6 +72,7 @@
     <div class="card">
       <h3>Transaksi Bulan Ini</h3>
       <div id="list"><div class="empty">Belum ada transaksi.</div></div>
+      <button class="btn ghost" onclick="exportCSV()">📥 Export Bulan Ini (CSV)</button>
     </div>
   </div>
 
@@ -96,6 +97,11 @@
     </div>
 
     <div class="card">
+      <h3>🔮 Forecast Bulan Ini</h3>
+      <div id="forecastBox"></div>
+    </div>
+
+    <div class="card">
       <h3>Pengeluaran per Kategori</h3>
       <div class="donutwrap">
         <svg class="donut" id="donut" width="130" height="130" viewBox="0 0 130 130"></svg>
@@ -106,6 +112,11 @@
     <div class="card">
       <h3>Top Kategori Pengeluaran</h3>
       <div id="bars"><div class="empty">Belum ada pengeluaran bulan ini.</div></div>
+    </div>
+
+    <div class="card">
+      <h3>📈 Tren 6 Bulan</h3>
+      <div id="trendBox"></div>
     </div>
   </div>
 
@@ -162,8 +173,18 @@
       <label>API Key OpenRouter</label>
       <input id="openrouterKey" type="text" placeholder="sk-or-v1-..." />
     </div>
+    <label>🔒 PIN Kunci App (opsional — kosongin buat matiin)</label>
+    <input id="pinSet" type="password" inputmode="numeric" maxlength="6" placeholder="contoh: 1234" />
     <button class="btn" onclick="saveSettings()">Simpan & Sambungkan</button>
   </div>
+</div>
+
+<div class="lockscreen" id="lockscreen">
+  <img src="logo.png" class="locklogo" alt="" />
+  <div class="locktitle">Masukin PIN</div>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="6" class="pininput" placeholder="••••" onkeydown="if(event.key==='Enter')tryUnlock()" />
+  <div class="lockmsg" id="lockMsg"></div>
+  <button class="btn" onclick="tryUnlock()">Buka</button>
 </div>
 
 <div class="toast" id="toast"></div>

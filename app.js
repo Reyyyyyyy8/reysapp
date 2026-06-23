@@ -22,6 +22,16 @@ function getAiKey(){return getProvider()==='openrouter'?getOpenRouter():getGemin
 const HIDE_KEY='reysapp_hide_saldo';
 function getHide(){return localStorage.getItem(HIDE_KEY)==='1';}
 function toggleSaldo(){localStorage.setItem(HIDE_KEY,getHide()?'0':'1');render();}
+const PIN_KEY='reysapp_pin';
+function getPin(){return localStorage.getItem(PIN_KEY)||'';}
+function lockApp(){
+  if(getPin()){const ls=document.getElementById('lockscreen');ls.classList.add('show');const pi=document.getElementById('pinInput');pi.value='';setTimeout(()=>pi.focus(),200);}
+}
+function tryUnlock(){
+  const v=document.getElementById('pinInput').value;
+  if(v===getPin()){document.getElementById('lockscreen').classList.remove('show');document.getElementById('lockMsg').textContent='';}
+  else{document.getElementById('lockMsg').textContent='PIN salah, coba lagi';document.getElementById('pinInput').value='';}
+}
 function getBudgets(){try{return JSON.parse(localStorage.getItem(BUDGET_KEY))||{};}catch(e){return {};}}
 function setBudget(kat,val){const b=getBudgets();if(val>0)b[kat]=val;else delete b[kat];localStorage.setItem(BUDGET_KEY,JSON.stringify(b));render();}
 function spentByCat(md){const m={};md.filter(d=>d.tipe==='pengeluaran').forEach(d=>{m[d.kategori]=(m[d.kategori]||0)+d.nominal;});return m;}
@@ -127,6 +137,8 @@ function renderDash(md,tin,tout){
   let pin=0,pout=0;pm.forEach(d=>{d.tipe==='pemasukan'?pin+=d.nominal:pout+=d.nominal;});
   renderCompare(tin,tout,pin,pout);
   renderSavings(tin,tout);
+  renderForecast(tin,tout);
+  renderTrend();
   const map={};
   md.filter(d=>d.tipe==='pengeluaran').forEach(d=>{map[d.kategori]=(map[d.kategori]||0)+d.nominal;});
   const arr=Object.keys(map).map(k=>({nama:k,val:map[k]})).sort((a,b)=>b.val-a.val);
@@ -412,6 +424,62 @@ function saveGoal(){
 }
 function hapusGoal(){setGoalData(null);document.getElementById('goalName').value='';document.getElementById('goalTarget').value='';renderGoal();toast('Target dihapus');}
 
+function renderForecast(tin,tout){
+  const box=document.getElementById('forecastBox');if(!box)return;
+  const now=new Date();
+  const sameMonth=cursor.getFullYear()===now.getFullYear()&&cursor.getMonth()===now.getMonth();
+  if(!sameMonth){
+    box.innerHTML='<div class="fc-note">Proyeksi cuma buat bulan berjalan. Bulan ini realisasinya: pengeluaran '+rp(tout)+', selisih '+rp(tin-tout)+'.</div>';
+    return;
+  }
+  const daysInMonth=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate();
+  const dayNow=now.getDate();
+  const projOut=Math.round(tout/dayNow*daysInMonth);
+  const projNet=tin-projOut;
+  const sisaHari=daysInMonth-dayNow;
+  box.innerHTML=
+    '<div class="fc-main">'+rp(projOut)+'</div>'+
+    '<div class="fc-sub">perkiraan total pengeluaran sampai akhir bulan</div>'+
+    '<div class="fc-row"><span>Rata-rata pengeluaran/hari</span><span>'+rp(Math.round(tout/dayNow))+'</span></div>'+
+    '<div class="fc-row"><span>Sisa hari bulan ini</span><span>'+sisaHari+' hari</span></div>'+
+    '<div class="fc-row"><span>Proyeksi selisih akhir bulan</span><span class="'+(projNet>=0?'gd':'bd')+'">'+rp(projNet)+'</span></div>';
+}
+function renderTrend(){
+  const box=document.getElementById('trendBox');if(!box)return;
+  const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(cursor.getFullYear(),cursor.getMonth()-i,1);
+    const ym=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    let mi=0,mo=0;
+    data.forEach(x=>{if(ymOf(x.tanggal)===ym){x.tipe==='pemasukan'?mi+=x.nominal:mo+=x.nominal;}});
+    months.push({lbl:BULAN[d.getMonth()].slice(0,3),mi,mo});
+  }
+  const max=Math.max(1,...months.map(m=>Math.max(m.mi,m.mo)));
+  let html='<div class="trend">';
+  months.forEach(m=>{
+    const hi=Math.round(m.mi/max*100),ho=Math.round(m.mo/max*100);
+    html+='<div class="tcol"><div class="tbars">'+
+      '<div class="tb in" style="height:'+hi+'%"></div>'+
+      '<div class="tb out" style="height:'+ho+'%"></div>'+
+      '</div><div class="tlbl">'+m.lbl+'</div></div>';
+  });
+  html+='</div><div class="tlegend"><span class="dot in"></span>Masuk <span class="dot out"></span>Keluar</div>';
+  box.innerHTML=html;
+}
+function exportCSV(){
+  const md=monthData();
+  if(!md.length){toast('Ga ada transaksi buat diexport');return;}
+  const rows=[['Tanggal','Tipe','Kategori','Nominal','Catatan']];
+  md.forEach(d=>rows.push([d.tanggal,d.tipe,d.kategori,d.nominal,d.catatan||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='ReysApp-'+curYM()+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('CSV diexport \ud83d\udce5');
+}
+
 async function api(method,body){
   const url=getApi();
   if(!url)throw new Error('URL belum diatur');
@@ -468,6 +536,7 @@ function openSettings(){
   document.getElementById('geminiKey').value=getGemini();
   document.getElementById('openrouterKey').value=getOpenRouter();
   document.getElementById('aiProvider').value=getProvider();
+  document.getElementById('pinSet').value=getPin();
   syncProviderField();
   document.getElementById('settings').classList.add('show');
 }
@@ -482,6 +551,7 @@ function saveSettings(){
   localStorage.setItem(AI_PROVIDER_KEY,document.getElementById('aiProvider').value);
   localStorage.setItem(GEMINI_KEY,document.getElementById('geminiKey').value.trim());
   localStorage.setItem(OPENROUTER_KEY,document.getElementById('openrouterKey').value.trim());
+  localStorage.setItem(PIN_KEY,document.getElementById('pinSet').value.replace(/[^0-9]/g,''));
   document.getElementById('settings').classList.remove('show');
   toast('Tersambung!');muat();
 }
@@ -492,3 +562,4 @@ document.getElementById('tanggal').valueAsDate=new Date();
 renderChips();
 render();
 muat();
+lockApp();
