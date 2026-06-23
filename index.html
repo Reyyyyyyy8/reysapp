@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ReysApp" />
+<meta name="theme-color" content="#1a0a3c" />
+<title>ReysApp — Catatan Keuangan</title>
+<link rel="apple-touch-icon" href="logo.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="logo.png" alt="ReysApp" />
+    <div class="t">Reys<span>App</span></div>
+    <button class="gear" onclick="openSettings()">⚙️</button>
+  </header>
+
+  <div class="tabs">
+    <button id="tabCatat" class="active" onclick="setTab('catat')">📝 Catat</button>
+    <button id="tabDash" onclick="setTab('dash')">📊 Dashboard</button>
+  </div>
+
+  <div class="monthnav">
+    <button onclick="shiftMonth(-1)">‹</button>
+    <div class="lbl" id="monthLbl">—</div>
+    <button onclick="shiftMonth(1)">›</button>
+  </div>
+
+  <!-- ===== VIEW CATAT ===== -->
+  <div id="viewCatat">
+    <div class="balance">
+      <div class="lbl">Saldo Bulan Ini</div>
+      <div class="amt" id="saldo">Rp 0</div>
+      <div class="row">
+        <div class="b"><div class="s">Pemasukan</div><div class="v in" id="totalIn">Rp 0</div></div>
+        <div class="b"><div class="s">Pengeluaran</div><div class="v out" id="totalOut">Rp 0</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Tambah Transaksi</h3>
+      <div class="seg">
+        <button id="segOut" class="active out" onclick="setTipe('pengeluaran')">↓ Pengeluaran</button>
+        <button id="segIn" class="in" onclick="setTipe('pemasukan')">↑ Pemasukan</button>
+      </div>
+      <label>Nominal (Rp)</label>
+      <input id="nominal" type="tel" inputmode="numeric" placeholder="0" oninput="formatNominal(this)" />
+      <label>Kategori</label>
+      <div class="chips" id="chips"></div>
+      <div class="grid2">
+        <div><label>Tanggal</label><input id="tanggal" type="date" /></div>
+      </div>
+      <label>Catatan (opsional)</label>
+      <input id="catatan" type="text" placeholder="contoh: makan siang" />
+      <button class="btn" id="saveBtn" onclick="simpan()">Simpan Transaksi</button>
+    </div>
+
+    <div class="card">
+      <h3>Transaksi Bulan Ini</h3>
+      <div id="list"><div class="empty">Belum ada transaksi.</div></div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW DASHBOARD ===== -->
+  <div id="viewDash" class="hidden">
+    <div class="dgrid">
+      <div class="stat"><div class="s">Pemasukan</div><div class="v in" id="dIn">Rp 0</div></div>
+      <div class="stat"><div class="s">Pengeluaran</div><div class="v out" id="dOut">Rp 0</div></div>
+    </div>
+    <div class="stat" style="margin-top:10px;">
+      <div class="s">Selisih (Saldo Bulan Ini)</div><div class="v" id="dNet">Rp 0</div>
+    </div>
+
+    <div class="card">
+      <h3>Pengeluaran per Kategori</h3>
+      <div class="donutwrap">
+        <svg class="donut" id="donut" width="130" height="130" viewBox="0 0 130 130"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Top Kategori Pengeluaran</h3>
+      <div id="bars"><div class="empty">Belum ada pengeluaran bulan ini.</div></div>
+    </div>
+  </div>
+
+  <div class="status" id="status">Mode: <b>belum tersambung</b></div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="settings">
+  <div class="sheet">
+    <h3>⚙️ Pengaturan</h3>
+    <p>Tempel URL Web App dari Google Apps Script lo di sini. Data bakal langsung kecatet ke Google Sheet.</p>
+    <label>URL Web App (Apps Script)</label>
+    <input id="apiUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+    <button class="btn" onclick="saveSettings()">Simpan & Sambungkan</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
