@@ -199,3 +199,13 @@ input:focus,select:focus{border-color:var(--orange);}
 .pininput{max-width:200px;text-align:center;letter-spacing:8px;font-size:22px;}
 .lockmsg{color:var(--red);font-size:13px;min-height:18px;}
 .lockscreen .btn{max-width:200px;}
+
+/* dompet / wallet */
+.wallet{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);}
+.wallet:last-child{border-bottom:none;}
+.wallet .wn{flex:1;font-weight:700;font-size:14px;}
+.wallet .wv{font-weight:800;font-size:15px;}
+.wallet .wdel{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;}
+.walletadd{display:flex;gap:8px;margin-top:14px;align-items:stretch;}
+.walletadd input{flex:1;}
+.walletadd .btn{margin-top:0;width:auto;padding:13px 16px;white-space:nowrap;}

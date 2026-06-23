@@ -17,7 +17,7 @@
 // ====== KONFIGURASI ======
 const SHEET_ID = 'GANTI_DENGAN_ID_SHEET_LO';
 const SHEET_NAME = 'Transaksi';
-const HEADERS = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Nominal', 'Catatan', 'Dibuat'];
+const HEADERS = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Nominal', 'Catatan', 'Dibuat', 'Dompet'];
 // =========================
 
 function getSheet_() {
@@ -30,6 +30,12 @@ function getSheet_() {
     sheet.appendRow(HEADERS);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
     sheet.setFrozenRows(1);
+  } else {
+    // upgrade: pastikan kolom Dompet ada di sheet lama
+    const hdr = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+    if (hdr[HEADERS.length - 1] !== 'Dompet') {
+      sheet.getRange(1, HEADERS.length).setValue('Dompet').setFontWeight('bold');
+    }
   }
   return sheet;
 }
@@ -79,8 +85,9 @@ function addTransaksi_(body) {
   const kategori = body.kategori || 'Lainnya';
   const nominal = Number(body.nominal) || 0;
   const catatan = body.catatan || '';
-  sheet.appendRow([id, tanggal, tipe, kategori, nominal, catatan, now]);
-  return { id: id, tanggal: tanggal, tipe: tipe, kategori: kategori, nominal: nominal, catatan: catatan };
+  const dompet = body.dompet || '';
+  sheet.appendRow([id, tanggal, tipe, kategori, nominal, catatan, now, dompet]);
+  return { id: id, tanggal: tanggal, tipe: tipe, kategori: kategori, nominal: nominal, catatan: catatan, dompet: dompet };
 }
 
 function deleteTransaksi_(id) {
@@ -108,7 +115,8 @@ function listTransaksi_() {
       tipe: String(r[2]),
       kategori: String(r[3]),
       nominal: Number(r[4]) || 0,
-      catatan: String(r[5] || '')
+      catatan: String(r[5] || ''),
+      dompet: String(r[7] || '')
     });
   }
   // urutkan terbaru di atas

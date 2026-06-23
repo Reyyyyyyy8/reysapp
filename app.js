@@ -52,6 +52,46 @@ function getRutin(){try{return JSON.parse(localStorage.getItem(RUTIN_KEY))||[];}
 function setRutinArr(arr){localStorage.setItem(RUTIN_KEY,JSON.stringify(arr));}
 function getGoal(){try{return JSON.parse(localStorage.getItem(GOAL_KEY))||null;}catch(e){return null;}}
 function setGoalData(g){localStorage.setItem(GOAL_KEY,JSON.stringify(g));}
+const DOMPET_KEY='reysapp_dompet';
+let dompet='';
+function getDompets(){try{const a=JSON.parse(localStorage.getItem(DOMPET_KEY));return (a&&a.length)?a:['Cash','Bank','E-Wallet'];}catch(e){return ['Cash','Bank','E-Wallet'];}}
+function setDompetsArr(a){localStorage.setItem(DOMPET_KEY,JSON.stringify(a));}
+function saldoByDompet(){const m={};data.forEach(d=>{const w=d.dompet||'Lainnya';if(!m[w])m[w]=0;m[w]+=d.tipe==='pemasukan'?d.nominal:-d.nominal;});return m;}
+function renderDompetChips(){
+  const box=document.getElementById('dompetChips');if(!box)return;
+  const arr=getDompets();
+  if(!arr.includes(dompet))dompet=arr[0]||'';
+  box.innerHTML='';
+  arr.forEach(w=>{
+    const c=document.createElement('div');
+    c.className='chip'+(w===dompet?' active':'');c.textContent=w;
+    c.onclick=()=>{dompet=w;[...box.children].forEach(x=>x.classList.remove('active'));c.classList.add('active');};
+    box.appendChild(c);
+  });
+}
+function addDompet(){
+  const el=document.getElementById('newDompet');const n=(el.value||'').trim();
+  if(!n){toast('Isi nama dompet dulu');return;}
+  const a=getDompets();if(a.includes(n)){toast('Dompet udah ada');return;}
+  a.push(n);setDompetsArr(a);el.value='';dompet=n;renderDompetChips();renderWallets();toast('Dompet ditambah \ud83d\udcb3');
+}
+function hapusDompet(n){const a=getDompets().filter(x=>x!==n);setDompetsArr(a);renderDompetChips();renderWallets();toast('Dompet dihapus');}
+function renderWallets(){
+  const box=document.getElementById('walletList');if(!box)return;
+  const m=saldoByDompet();const arr=getDompets();
+  const keys=arr.slice();Object.keys(m).forEach(k=>{if(!keys.includes(k))keys.push(k);});
+  const hidden=getHide();box.innerHTML='';
+  if(!keys.length){box.innerHTML='<div class="empty" style="padding:8px 0;">Belum ada dompet.</div>';return;}
+  keys.forEach(w=>{
+    const val=m[w]||0;
+    const row=document.createElement('div');row.className='wallet';
+    const nm=document.createElement('div');nm.className='wn';nm.textContent='\ud83d\udcb3 '+w;
+    const vv=document.createElement('div');vv.className='wv '+(val>=0?'in':'out');vv.textContent=hidden?'Rp \u2022\u2022\u2022\u2022':rp(val);
+    row.appendChild(nm);row.appendChild(vv);
+    if(arr.includes(w)){const b=document.createElement('button');b.className='wdel';b.textContent='\u2715';b.onclick=()=>{if(confirm('Hapus dompet "'+w+'"? Transaksi lama tetap aman.'))hapusDompet(w);};row.appendChild(b);}
+    box.appendChild(row);
+  });
+}
 function avgSurplus(){
   const byM={};
   data.forEach(d=>{const m=ymOf(d.tanggal);if(!byM[m])byM[m]=0;byM[m]+=d.tipe==='pemasukan'?d.nominal:-d.nominal;});
@@ -126,6 +166,7 @@ function render(){
   if(curTab==='dash')renderDash(md,tin,tout);
   if(curTab==='budget'){renderBudget(md);renderGoal();}
   renderRutin();
+  renderWallets();
 }
 
 function renderDash(md,tin,tout){
@@ -509,7 +550,7 @@ async function simpan(){
   if(!nominal){toast('Isi nominalnya dulu bro');return;}
   if(!getApi()){toast('Sambungin ke Sheet dulu di ⚙️');openSettings();return;}
   const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent='Menyimpan…';
-  const payload={action:'add',tipe,kategori,nominal,
+  const payload={action:'add',tipe,kategori,nominal,dompet,
     tanggal:document.getElementById('tanggal').value,
     catatan:document.getElementById('catatan').value.trim()};
   try{
@@ -560,6 +601,7 @@ document.getElementById('settings').addEventListener('click',e=>{if(e.target.id=
 // init
 document.getElementById('tanggal').valueAsDate=new Date();
 renderChips();
+renderDompetChips();
 render();
 muat();
 lockApp();

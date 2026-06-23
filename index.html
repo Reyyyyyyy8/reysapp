@@ -45,6 +45,16 @@
     </div>
 
     <div class="card">
+      <h3>💳 Dompet</h3>
+      <p class="hint">Pisahin duit lo per tempat (Cash, Bank, E-Wallet). Saldo tiap dompet diitung otomatis dari transaksi.</p>
+      <div id="walletList"></div>
+      <div class="walletadd">
+        <input id="newDompet" type="text" placeholder="contoh: Gopay" />
+        <button class="btn ghost" onclick="addDompet()">➕ Tambah</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h3>Tambah Transaksi</h3>
       <div class="seg">
         <button id="segOut" class="active out" onclick="setTipe('pengeluaran')">↓ Pengeluaran</button>
@@ -54,6 +64,8 @@
       <input id="nominal" type="tel" inputmode="numeric" placeholder="0" oninput="formatNominal(this)" />
       <label>Kategori</label>
       <div class="chips" id="chips"></div>
+      <label>Dompet</label>
+      <div class="chips" id="dompetChips"></div>
       <div class="grid2">
         <div><label>Tanggal</label><input id="tanggal" type="date" /></div>
       </div>
