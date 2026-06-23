@@ -36,6 +36,7 @@ header .gear{margin-left:auto;background:var(--card);border:1px solid var(--line
 .balance:after{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;
   background:radial-gradient(circle,var(--orange) 0%,transparent 70%);opacity:.35;}
 .balance .lbl{color:var(--muted);font-size:13px;}
+.eye{background:none;border:none;cursor:pointer;font-size:14px;padding:0;margin-left:2px;line-height:1;}
 .balance .amt{font-size:32px;font-weight:800;margin-top:4px;}
 .balance .row{display:flex;gap:10px;margin-top:8px;}
 .balance .mlabel{color:var(--muted);font-size:12px;margin-top:14px;}

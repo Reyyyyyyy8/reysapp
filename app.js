@@ -13,7 +13,15 @@ let cursor=new Date();
 const API_KEY='reysapp_api_url';
 const BUDGET_KEY='reysapp_budget';
 const GEMINI_KEY='reysapp_gemini_key';
+const OPENROUTER_KEY='reysapp_openrouter_key';
+const AI_PROVIDER_KEY='reysapp_ai_provider';
 function getGemini(){return localStorage.getItem(GEMINI_KEY)||'';}
+function getOpenRouter(){return localStorage.getItem(OPENROUTER_KEY)||'';}
+function getProvider(){return localStorage.getItem(AI_PROVIDER_KEY)||'gemini';}
+function getAiKey(){return getProvider()==='openrouter'?getOpenRouter():getGemini();}
+const HIDE_KEY='reysapp_hide_saldo';
+function getHide(){return localStorage.getItem(HIDE_KEY)==='1';}
+function toggleSaldo(){localStorage.setItem(HIDE_KEY,getHide()?'0':'1');render();}
 function getBudgets(){try{return JSON.parse(localStorage.getItem(BUDGET_KEY))||{};}catch(e){return {};}}
 function setBudget(kat,val){const b=getBudgets();if(val>0)b[kat]=val;else delete b[kat];localStorage.setItem(BUDGET_KEY,JSON.stringify(b));render();}
 function spentByCat(md){const m={};md.filter(d=>d.tipe==='pengeluaran').forEach(d=>{m[d.kategori]=(m[d.kategori]||0)+d.nominal;});return m;}
@@ -67,7 +75,9 @@ function render(){
   md.forEach(d=>{d.tipe==='pemasukan'?tin+=d.nominal:tout+=d.nominal;});
   let allIn=0,allOut=0;
   data.forEach(d=>{d.tipe==='pemasukan'?allIn+=d.nominal:allOut+=d.nominal;});
-  document.getElementById('saldo').textContent=rp(allIn-allOut);
+  const hidden=getHide();
+  document.getElementById('saldo').textContent=hidden?'Rp \u2022\u2022\u2022\u2022\u2022\u2022':rp(allIn-allOut);
+  const eye=document.getElementById('eyeBtn');if(eye)eye.textContent=hidden?'\ud83d\ude48':'\ud83d\udc41\ufe0f';
   document.getElementById('totalIn').textContent=rp(tin);
   document.getElementById('totalOut').textContent=rp(tout);
   const fl=document.getElementById('flowLabel');if(fl)fl.textContent='Arus '+BULAN[cursor.getMonth()]+' '+cursor.getFullYear();
@@ -229,9 +239,33 @@ function mdLite(t){
   return h;
 }
 
+async function callGemini(key,prompt){
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+  });
+  const j=await res.json();
+  if(j.error)throw new Error(j.error.message||'API error');
+  const txt=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts[0].text;
+  if(!txt)throw new Error('Respon kosong dari AI');
+  return txt;
+}
+async function callOpenRouter(key,prompt){
+  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({model:'meta-llama/llama-3.3-70b-instruct:free',messages:[{role:'user',content:prompt}]})
+  });
+  const j=await res.json();
+  if(j.error)throw new Error((j.error&&j.error.message)||'API error');
+  const txt=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+  if(!txt)throw new Error('Respon kosong dari AI');
+  return txt;
+}
 async function analisaAI(){
-  const key=getGemini();
-  if(!key){toast('Set API Key Gemini dulu di \u2699\ufe0f');openSettings();return;}
+  const provider=getProvider();
+  const key=getAiKey();
+  const pname=provider==='openrouter'?'OpenRouter':'Gemini';
+  if(!key){toast('Set API Key '+pname+' dulu di \u2699\ufe0f');openSettings();return;}
   if(!data.length){toast('Belum ada data buat dianalisa');return;}
   const btn=document.getElementById('aiBtn');btn.disabled=true;btn.textContent='Lagi mikir\u2026 \ud83e\udd14';
   const box=document.getElementById('aiResult');
@@ -244,14 +278,7 @@ async function analisaAI(){
     '3. 2-3 saran konkret yang bisa langsung dilakuin.\n'+
     'Jangan kepanjangan, to the point, pakai poin-poin. Jangan pakai tabel.\n\n'+buildFinanceSummary();
   try{
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    const j=await res.json();
-    if(j.error)throw new Error(j.error.message||'API error');
-    const txt=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts[0].text;
-    if(!txt)throw new Error('Respon kosong dari AI');
+    const txt=provider==='openrouter'?await callOpenRouter(key,prompt):await callGemini(key,prompt);
     box.innerHTML=mdLite(txt);
   }catch(e){
     box.innerHTML='<div class="empty">Gagal: '+e.message+'</div>';
@@ -311,11 +338,25 @@ async function hapus(id){
   catch(e){toast('Gagal hapus: '+e.message);}
 }
 
-function openSettings(){document.getElementById('apiUrl').value=getApi();document.getElementById('geminiKey').value=getGemini();document.getElementById('settings').classList.add('show');}
+function openSettings(){
+  document.getElementById('apiUrl').value=getApi();
+  document.getElementById('geminiKey').value=getGemini();
+  document.getElementById('openrouterKey').value=getOpenRouter();
+  document.getElementById('aiProvider').value=getProvider();
+  syncProviderField();
+  document.getElementById('settings').classList.add('show');
+}
+function syncProviderField(){
+  const p=document.getElementById('aiProvider').value;
+  document.getElementById('rowGemini').classList.toggle('hidden',p!=='gemini');
+  document.getElementById('rowOpenRouter').classList.toggle('hidden',p!=='openrouter');
+}
 function saveSettings(){
   const v=document.getElementById('apiUrl').value.trim();
   localStorage.setItem(API_KEY,v);
+  localStorage.setItem(AI_PROVIDER_KEY,document.getElementById('aiProvider').value);
   localStorage.setItem(GEMINI_KEY,document.getElementById('geminiKey').value.trim());
+  localStorage.setItem(OPENROUTER_KEY,document.getElementById('openrouterKey').value.trim());
   document.getElementById('settings').classList.remove('show');
   toast('Tersambung!');muat();
 }
