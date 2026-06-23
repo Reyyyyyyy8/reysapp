@@ -23,6 +23,7 @@
     <button id="tabCatat" class="active" onclick="setTab('catat')">📝 Catat</button>
     <button id="tabDash" onclick="setTab('dash')">📊 Dashboard</button>
     <button id="tabBudget" onclick="setTab('budget')">🎯 Budget</button>
+    <button id="tabAI" onclick="setTab('ai')">🤖 AI</button>
   </div>
 
   <div class="monthnav">
@@ -100,6 +101,16 @@
     </div>
   </div>
 
+  <!-- ===== VIEW AI ===== -->
+  <div id="viewAI" class="hidden">
+    <div class="card">
+      <h3>🤖 Penasihat Keuangan AI</h3>
+      <p class="hint">Analisa pemasukan &amp; pengeluaran lo pakai AI, dapet saran kayak punya konsultan keuangan pribadi. Butuh API Key Gemini (gratis) — set di ⚙️. Analisa ngikut bulan yang lagi dipilih.</p>
+      <button class="btn" id="aiBtn" onclick="analisaAI()">✨ Analisa Keuangan Gua</button>
+      <div id="aiResult" class="airesult"></div>
+    </div>
+  </div>
+
   <div class="status" id="status">Mode: <b>belum tersambung</b></div>
 </div>
 
@@ -110,6 +121,8 @@
     <p>Tempel URL Web App dari Google Apps Script lo di sini. Data bakal langsung kecatet ke Google Sheet.</p>
     <label>URL Web App (Apps Script)</label>
     <input id="apiUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+    <label>API Key Gemini (buat fitur AI — opsional)</label>
+    <input id="geminiKey" type="text" placeholder="AIza..." />
     <button class="btn" onclick="saveSettings()">Simpan & Sambungkan</button>
   </div>
 </div>

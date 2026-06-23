@@ -12,6 +12,8 @@ let curTab='catat';
 let cursor=new Date();
 const API_KEY='reysapp_api_url';
 const BUDGET_KEY='reysapp_budget';
+const GEMINI_KEY='reysapp_gemini_key';
+function getGemini(){return localStorage.getItem(GEMINI_KEY)||'';}
 function getBudgets(){try{return JSON.parse(localStorage.getItem(BUDGET_KEY))||{};}catch(e){return {};}}
 function setBudget(kat,val){const b=getBudgets();if(val>0)b[kat]=val;else delete b[kat];localStorage.setItem(BUDGET_KEY,JSON.stringify(b));render();}
 function spentByCat(md){const m={};md.filter(d=>d.tipe==='pengeluaran').forEach(d=>{m[d.kategori]=(m[d.kategori]||0)+d.nominal;});return m;}
@@ -30,9 +32,11 @@ function setTab(t){
   document.getElementById('tabCatat').classList.toggle('active',t==='catat');
   document.getElementById('tabDash').classList.toggle('active',t==='dash');
   document.getElementById('tabBudget').classList.toggle('active',t==='budget');
+  document.getElementById('tabAI').classList.toggle('active',t==='ai');
   document.getElementById('viewCatat').classList.toggle('hidden',t!=='catat');
   document.getElementById('viewDash').classList.toggle('hidden',t!=='dash');
   document.getElementById('viewBudget').classList.toggle('hidden',t!=='budget');
+  document.getElementById('viewAI').classList.toggle('hidden',t!=='ai');
   render();
 }
 function shiftMonth(d){cursor.setMonth(cursor.getMonth()+d);render();}
@@ -186,6 +190,76 @@ function checkBudgetAlert(kat){
   else if(r>=0.8)toast('\u26a0\ufe0f Budget '+kat+' udah '+Math.round(r*100)+'% kepake');
 }
 
+function buildFinanceSummary(){
+  let allIn=0,allOut=0;
+  data.forEach(d=>{d.tipe==='pemasukan'?allIn+=d.nominal:allOut+=d.nominal;});
+  const md=monthData();
+  let mIn=0,mOut=0;const catOut={};
+  md.forEach(d=>{
+    if(d.tipe==='pemasukan')mIn+=d.nominal;
+    else{mOut+=d.nominal;catOut[d.kategori]=(catOut[d.kategori]||0)+d.nominal;}
+  });
+  const budgets=getBudgets();
+  let s='Data keuangan user (mata uang Rupiah):\n';
+  s+='- Total saldo akumulatif (semua waktu): '+rp(allIn-allOut)+'\n';
+  s+='- Total pemasukan semua waktu: '+rp(allIn)+'\n';
+  s+='- Total pengeluaran semua waktu: '+rp(allOut)+'\n';
+  s+='Bulan '+BULAN[cursor.getMonth()]+' '+cursor.getFullYear()+':\n';
+  s+='- Pemasukan: '+rp(mIn)+'\n';
+  s+='- Pengeluaran: '+rp(mOut)+'\n';
+  s+='- Selisih: '+rp(mIn-mOut)+'\n';
+  s+='Pengeluaran per kategori bulan ini:\n';
+  const cats=Object.keys(catOut).sort((a,b)=>catOut[b]-catOut[a]);
+  if(!cats.length)s+='  (belum ada pengeluaran)\n';
+  cats.forEach(k=>{
+    let line='  - '+k+': '+rp(catOut[k]);
+    if(budgets[k])line+=' (budget '+rp(budgets[k])+', kepake '+Math.round(catOut[k]/budgets[k]*100)+'%)';
+    s+=line+'\n';
+  });
+  s+='Jumlah transaksi bulan ini: '+md.length+'\n';
+  return s;
+}
+
+function mdLite(t){
+  let h=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h=h.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  h=h.replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>');
+  h=h.replace(/^\s*[-*]\s+/gm,'\u2022 ');
+  h=h.replace(/\n/g,'<br>');
+  return h;
+}
+
+async function analisaAI(){
+  const key=getGemini();
+  if(!key){toast('Set API Key Gemini dulu di \u2699\ufe0f');openSettings();return;}
+  if(!data.length){toast('Belum ada data buat dianalisa');return;}
+  const btn=document.getElementById('aiBtn');btn.disabled=true;btn.textContent='Lagi mikir\u2026 \ud83e\udd14';
+  const box=document.getElementById('aiResult');
+  box.innerHTML='<div class="empty">AI lagi nganalisa keuangan lo\u2026</div>';
+  const prompt='Kamu adalah penasihat keuangan pribadi yang santai, tajam, dan jujur. '+
+    'Panggil user dengan "lo" dan sebut diri "gue", pakai bahasa Indonesia gaul tapi tetap berisi. '+
+    'Analisa data keuangan di bawah ini. Berikan:\n'+
+    '1. Ringkasan kondisi keuangan (sehat/boros/aman).\n'+
+    '2. 2-3 insight tajam (kategori paling boros, rasio pengeluaran vs pemasukan, dll).\n'+
+    '3. 2-3 saran konkret yang bisa langsung dilakuin.\n'+
+    'Jangan kepanjangan, to the point, pakai poin-poin. Jangan pakai tabel.\n\n'+buildFinanceSummary();
+  try{
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    });
+    const j=await res.json();
+    if(j.error)throw new Error(j.error.message||'API error');
+    const txt=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts[0].text;
+    if(!txt)throw new Error('Respon kosong dari AI');
+    box.innerHTML=mdLite(txt);
+  }catch(e){
+    box.innerHTML='<div class="empty">Gagal: '+e.message+'</div>';
+    toast('Gagal analisa: '+e.message);
+  }
+  btn.disabled=false;btn.textContent='\u2728 Analisa Ulang';
+}
+
 async function api(method,body){
   const url=getApi();
   if(!url)throw new Error('URL belum diatur');
@@ -237,10 +311,11 @@ async function hapus(id){
   catch(e){toast('Gagal hapus: '+e.message);}
 }
 
-function openSettings(){document.getElementById('apiUrl').value=getApi();document.getElementById('settings').classList.add('show');}
+function openSettings(){document.getElementById('apiUrl').value=getApi();document.getElementById('geminiKey').value=getGemini();document.getElementById('settings').classList.add('show');}
 function saveSettings(){
   const v=document.getElementById('apiUrl').value.trim();
   localStorage.setItem(API_KEY,v);
+  localStorage.setItem(GEMINI_KEY,document.getElementById('geminiKey').value.trim());
   document.getElementById('settings').classList.remove('show');
   toast('Tersambung!');muat();
 }
