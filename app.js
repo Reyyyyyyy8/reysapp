@@ -537,6 +537,8 @@ async function muat(){
   try{
     document.getElementById('status').innerHTML='Mode: <b>menyambungkan…</b>';
     data=await api('GET');
+    // kalo bulan yang lagi dibuka kosong, lompat ke bulan transaksi terakhir
+    if(data.length && !monthData().length){ cursor=new Date(data[0].tanggal+'T00:00:00'); }
     render();
     document.getElementById('status').innerHTML='Mode: <b>tersambung ke Google Sheet</b> ✅';
   }catch(e){
